@@ -4,15 +4,18 @@ import {RootState} from "type/state";
 import {Location} from "history";
 import {ProductAJAXWebService} from "service/ProductAJAXWebService";
 import {LanguageCode, GoogleTranslateResponse} from "./type";
+import { message } from 'antd';
 
 export interface HomeState {
     languageList: any[];
     mergeLanguageList: any[];
+    columns: string[];
 }
 
 const homeInitState: HomeState = {
     languageList: [],
     mergeLanguageList: [],
+    columns: [],
 };
 
 function abstractKeys(obj: Object) {
@@ -41,6 +44,29 @@ function abstractKeys(obj: Object) {
     loop(obj);
 
     return ALL_KEYS;
+}
+
+function restoreByKeys(ALL_KEYS: Array<{key: string; value: string}>) {
+    const splitMarker = "####";
+    let obj = {};
+    function detectObj(obj: any, props: string[], value: string): any {
+        if(!props.length){
+            return;
+        }
+        const prop = props.unshift();
+        if(!props.length){
+            obj.prop = value;
+            return;
+        }
+        if(!obj[prop]){
+            obj.prop = {};
+        }
+        detectObj(obj.prop, props, value);
+    }
+    ALL_KEYS.forEach(item =>{
+        const props = item.key.split(splitMarker);
+        detectObj(obj, props, item.value);
+    })
 }
 
 class HomeModule extends Module<RootState, "home"> {
@@ -77,27 +103,30 @@ class HomeModule extends Module<RootState, "home"> {
         // yield* this.translate("translate", "zh");
         // eslint-disable-next-line no-console
         console.log(file, "file");
-        const name = colName || file.name;
+        let {languageList, mergeLanguageList, columns} = this.state;
+        const name = colName || file.name.replace(".json", "");
+        if(columns.includes(name)){
+            message.error("Don't import json with same name");
+            return;
+        }
         const reader = new FileReader();
-        const {languageList, mergeLanguageList} = this.state;
 
         reader.onload = result => {
-            // eslint-disable-next-line no-console
-            console.log(result);
             try {
                 const jsonStr = (result.target?.result || "{}") as string;
                 const obj = JSON.parse(jsonStr);
-                languageList.push(obj);
+                languageList = languageList.concat([{title: name, value: obj}]);
                 const flatObj = abstractKeys(obj);
                 flatObj.forEach(item => {
-                    const filterItem = mergeLanguageList.filter(lang => lang.title ===item.key)[0];
-                    // if(filterItem){
-                    //     filterItem[name] =
-                    // }
+                    let filterItem = mergeLanguageList.filter(lang => lang.title ===item.key)[0];
+                    if(filterItem){
+                        filterItem = {...filterItem, ...{[name]: item.value}};
+                        mergeLanguageList = mergeLanguageList.filter(lang => lang.title !==item.key).concat([filterItem]);
+                    }else{
+                        mergeLanguageList.push({title: item.key, [name]: item.value});
+                    }
                 })
-                this.setState({languageList});
-                // eslint-disable-next-line no-console
-                console.log(languageList, "languageList");
+                this.setState({languageList, mergeLanguageList, columns: columns.concat([name])});
             } catch (err) {
                 // eslint-disable-next-line no-console
                 console.error(err);

@@ -19,6 +19,7 @@ const Header: React.FunctionComponent<Props> = ({importJSON}) => {
                     <Upload
                         action=""
                         accept=".json"
+                        showUploadList={false}
                         beforeUpload={file => {
                             if (file) {
                                 // message.success(`${info.file.name} file uploaded successfully`);

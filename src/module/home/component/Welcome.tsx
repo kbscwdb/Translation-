@@ -1,24 +1,58 @@
-import {Button} from "antd";
+import {Button, Table} from "antd";
+import {ColumnProps} from "antd/lib/table";
 import React from "react";
 import {connect} from "react-redux";
+import {Dispatch} from "redux";
+import {RootState} from "type/state";
+import {actions} from "../index";
 
 import ui from "conf/ui.json";
 
-const Welcome = () => {
-    // const abc = 2;
-    // if (abc === 1) {
-    //     throw new Error("react render error test");
-    // }
-    const onClick = () => {
-        throw new Error("test error in button");
-    };
+interface Props {
+    languageList: any[];
+    mergeLanguageList: any[];
+    columns: string[];
+}
 
+const Welcome: React.FC<Props> = ({languageList, mergeLanguageList, columns}) => {
+    // eslint-disable-next-line no-console
+    console.log(mergeLanguageList, "languageList");
+    const dataSource = mergeLanguageList.map(item => ({...item, key: item.title}));
+    const tableColumns: Array<ColumnProps<any>> = [
+        {
+            title: "title",
+            dataIndex: "title",
+            key: "title",
+            width: "30vw",
+            ellipsis: true,
+        },
+    ];
+    columns.forEach(column => {
+        tableColumns.push({
+            title: column,
+            dataIndex: column,
+            key: column,
+        });
+    });
     return (
         <div>
-            <h1>Welcome, {ui.title}</h1>
-            <Button onClick={onClick}>Test</Button>
+            <Table pagination={false} rowKey={record => record.title} columns={tableColumns} dataSource={dataSource} />
         </div>
     );
 };
 
-export default connect()(Welcome);
+const mapStatsToProps = (state: RootState) => {
+    const {mergeLanguageList, languageList, columns} = state.app.home;
+    return {
+        mergeLanguageList,
+        languageList,
+        columns,
+    };
+};
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+    // importJSON: (file?: File) => {
+    //     dispatch(actions.importJSON(file));
+    // },
+});
+
+export default connect(mapStatsToProps, mapDispatchToProps)(Welcome);
