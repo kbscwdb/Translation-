@@ -1,4 +1,4 @@
-import {Button, Table} from "antd";
+import {Button, Upload} from "antd";
 import {ColumnProps} from "antd/lib/table";
 import React from "react";
 import {connect} from "react-redux";
@@ -12,9 +12,10 @@ interface Props {
     languageList: any[];
     mergeLanguageList: any[];
     columns: string[];
+    translate: (image: string) => void;
 }
 
-const Welcome: React.FC<Props> = ({languageList, mergeLanguageList, columns}) => {
+const Welcome: React.FC<Props> = ({languageList, mergeLanguageList, columns, translate}) => {
     // eslint-disable-next-line no-console
     console.log(mergeLanguageList, "languageList");
     const dataSource = mergeLanguageList.map(item => ({...item, key: item.title}));
@@ -35,8 +36,33 @@ const Welcome: React.FC<Props> = ({languageList, mergeLanguageList, columns}) =>
         });
     });
     return (
-        <div>
-            <Table pagination={false} rowKey={record => record.title} columns={tableColumns} dataSource={dataSource} />
+        <div style={{textAlign: "center"}}>
+            <Upload
+                action=""
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={file => {
+                    if (file) {
+                        const reader = new FileReader();
+
+                        reader.onload = result => {
+                            try {
+                                const imageStr = (result.target?.result || "") as string;
+                                const imageBase64 = encodeURI(imageStr);
+                                translate(imageBase64);
+                            } catch (err) {
+                                // eslint-disable-next-line no-console
+                                console.error(err);
+                            }
+                        };
+                
+                        reader.readAsDataURL(file);
+                    }
+                    return false;
+                }}
+            >
+                <Button type="primary">上传图片</Button>
+            </Upload>
         </div>
     );
 };
@@ -50,9 +76,9 @@ const mapStatsToProps = (state: RootState) => {
     };
 };
 const mapDispatchToProps = (dispatch: Dispatch) => ({
-    // importJSON: (file?: File) => {
-    //     dispatch(actions.importJSON(file));
-    // },
+    translate: (image: string) => {
+        dispatch(actions.translate(image));
+    },
 });
 
 export default connect(mapStatsToProps, mapDispatchToProps)(Welcome);

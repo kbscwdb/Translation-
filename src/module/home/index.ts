@@ -4,7 +4,7 @@ import {RootState} from "type/state";
 import {Location} from "history";
 import {ProductAJAXWebService} from "service/ProductAJAXWebService";
 import {LanguageCode, GoogleTranslateResponse} from "./type";
-import { message } from 'antd';
+import {message} from "antd";
 
 export interface HomeState {
     languageList: any[];
@@ -18,69 +18,18 @@ const homeInitState: HomeState = {
     columns: [],
 };
 
-function abstractKeys(obj: Object) {
-    const splitMarker = "####";
-    const ALL_KEYS: Array<{key: string; value: string}> = [];
-
-    function loop(subObj: Object, preKey = "") {
-        if (typeof obj !== "object") {
-            return;
-        }
-        const keys = Object.keys(subObj);
-        if (!keys.length) {
-            return;
-        }
-        keys.forEach(key => {
-            if (typeof subObj[key] === "string") {
-                ALL_KEYS.push({key: `${preKey}${preKey ? splitMarker : ""}${key}`, value: subObj[key]});
-            } else if (typeof subObj[key] === "object") {
-                loop(subObj[key], `${preKey}${preKey ? splitMarker : ""}${key}`);
-            } else {
-                console.error(`${preKey}${preKey ? splitMarker : ""}${key} error`);
-            }
-        });
-    }
-
-    loop(obj);
-
-    return ALL_KEYS;
-}
-
-function restoreByKeys(ALL_KEYS: Array<{key: string; value: string}>) {
-    const splitMarker = "####";
-    let obj = {};
-    function detectObj(obj: any, props: string[], value: string): any {
-        if(!props.length){
-            return;
-        }
-        const prop = props.unshift();
-        if(!props.length){
-            obj.prop = value;
-            return;
-        }
-        if(!obj[prop]){
-            obj.prop = {};
-        }
-        detectObj(obj.prop, props, value);
-    }
-    ALL_KEYS.forEach(item =>{
-        const props = item.key.split(splitMarker);
-        detectObj(obj, props, item.value);
-    })
-}
+const ACCESS_TOKEN = "24.b460e5979c8895986dc02908477730a2.2592000.1605349345.282335-22827257";
 
 class HomeModule extends Module<RootState, "home"> {
-    _translate(query: string, target: LanguageCode, source: LanguageCode | "" = ""): Promise<GoogleTranslateResponse> {
+    _translate(image: string): Promise<GoogleTranslateResponse> {
         return new Promise((resolve, reject) => {
-            fetch("https://google-translate1.p.rapidapi.com/language/translate/v2", {
+            fetch(`https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic?access_token=${ACCESS_TOKEN}`, {
                 method: "POST",
                 headers: {
-                    "x-rapidapi-host": "google-translate1.p.rapidapi.com",
-                    "x-rapidapi-key": "cc992288bbmsh8a52e14579c3b7bp1a03b0jsn7aaf534f3eb4",
-                    "accept-encoding": "application/gzip",
                     "content-type": "application/x-www-form-urlencoded",
+                    "mode": "no-cors",
                 },
-                body: `source=${source}&q=${query}&target=${target}`,
+                body: `image=${image}`,
             })
                 .then(res => {
                     resolve(res.json());
@@ -91,49 +40,9 @@ class HomeModule extends Module<RootState, "home"> {
         });
     }
 
-    *translate(query: string, target: LanguageCode, source: LanguageCode | "" = ""): SagaIterator {
-        const response = yield* call(() => this._translate(query, target, source));
+    *translate(image: string): SagaIterator {
+        const response = yield* call(() => this._translate(image));
         console.log("translate", response);
-    }
-
-    *importJSON(file?: File, colName?: string): SagaIterator {
-        if (!file) {
-            return;
-        }
-        // yield* this.translate("translate", "zh");
-        // eslint-disable-next-line no-console
-        console.log(file, "file");
-        let {languageList, mergeLanguageList, columns} = this.state;
-        const name = colName || file.name.replace(".json", "");
-        if(columns.includes(name)){
-            message.error("Don't import json with same name");
-            return;
-        }
-        const reader = new FileReader();
-
-        reader.onload = result => {
-            try {
-                const jsonStr = (result.target?.result || "{}") as string;
-                const obj = JSON.parse(jsonStr);
-                languageList = languageList.concat([{title: name, value: obj}]);
-                const flatObj = abstractKeys(obj);
-                flatObj.forEach(item => {
-                    let filterItem = mergeLanguageList.filter(lang => lang.title ===item.key)[0];
-                    if(filterItem){
-                        filterItem = {...filterItem, ...{[name]: item.value}};
-                        mergeLanguageList = mergeLanguageList.filter(lang => lang.title !==item.key).concat([filterItem]);
-                    }else{
-                        mergeLanguageList.push({title: item.key, [name]: item.value});
-                    }
-                })
-                this.setState({languageList, mergeLanguageList, columns: columns.concat([name])});
-            } catch (err) {
-                // eslint-disable-next-line no-console
-                console.error(err);
-            }
-        };
-
-        reader.readAsText(file);
     }
 }
 

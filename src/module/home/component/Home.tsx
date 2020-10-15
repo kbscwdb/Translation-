@@ -15,7 +15,7 @@ const Home = () => {
         <Layout>
             {/* <Nav /> */}
             <Layout>
-                <Header />
+                {/* <Header /> */}
                 <Layout>
                     <Layout.Content className="app-layout">
                         <Switch>
